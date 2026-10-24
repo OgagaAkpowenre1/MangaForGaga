@@ -41,7 +41,8 @@ export default function UploadView({
             onChange={(e) => setLangOverride(e.target.value)}
           >
             <option value="auto">Auto-detect</option>
-            <option value="jpn">Japanese</option>
+            <option value="jpn">Japanese (horizontal)</option>
+            <option value="jpn_vert">Japanese (vertical manga)</option>
             <option value="chi_sim">Chinese (Simplified)</option>
             <option value="chi_tra">Chinese (Traditional)</option>
             <option value="kor">Korean</option>
