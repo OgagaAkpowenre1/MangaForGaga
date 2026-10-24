@@ -1,5 +1,6 @@
 export const LANGUAGES = {
-  jpn: { label: "Japanese", tessCode: "jpn" },
+  jpn: { label: "Japanese (horizontal)", tessCode: "jpn" },
+  jpn_vert: { label: "Japanese (vertical)", tessCode: "jpn_vert" },
   chi_sim: { label: "Chinese (Simplified)", tessCode: "chi_sim" },
   chi_tra: { label: "Chinese (Traditional)", tessCode: "chi_tra" },
   kor: { label: "Korean", tessCode: "kor" },
