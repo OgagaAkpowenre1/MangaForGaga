@@ -89,7 +89,8 @@ export default function ReaderView({
             disabled={isBusy}
           >
             <option value="auto">Auto-detect</option>
-            <option value="jpn">Japanese</option>
+            <option value="jpn">Japanese (horizontal)</option>
+            <option value="jpn_vert">Japanese (vertical manga)</option>
             <option value="chi_sim">Chinese (Simp.)</option>
             <option value="chi_tra">Chinese (Trad.)</option>
             <option value="kor">Korean</option>
@@ -140,7 +141,11 @@ export default function ReaderView({
             <h2>Translations</h2>
             {ocrStatus && (
               <span className="status-badge">
-                {ocrStatus.phase === "ocr" ? "Reading text…" : "Translating…"}{" "}
+                {ocrStatus.phase === "ocr"
+                  ? ocrStatus.status === "recognizing text" || !ocrStatus.status
+                    ? "Reading text…"
+                    : "Loading OCR data (first run only)…"
+                  : "Translating…"}{" "}
                 {Math.round((ocrStatus.progress || 0) * 100)}%
               </span>
             )}
