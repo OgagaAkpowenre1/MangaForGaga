@@ -63,11 +63,12 @@ export default function App() {
       try {
         const lang = langOverride === "auto" ? "jpn" : langOverride;
 
-        const words = await runOCRProgress(imgUrl, lang, (p) =>
-          setOcrStatus({ phase: "ocr", progress: p })
+        const words = await runOCRProgress(imgUrl, lang, (status, p) =>
+          setOcrStatus({ phase: "ocr", status, progress: p })
         );
 
-        const groups = groupWords(words);
+        const vertical = lang === "jpn_vert";
+        const groups = vertical ? groupWordsVertical(words) : groupWords(words);
         setRegions(groups);
 
         setOcrStatus({ phase: "translating", progress: 0 });
@@ -76,7 +77,7 @@ export default function App() {
           try {
             const res = await fetch(
               "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=auto&tl=en&q=" +
-                encodeURIComponent(groups[i].text)
+                encodeURIComponent(cleanCJK(groups[i].text))
             );
             const data = await res.json();
             const translated = Array.isArray(data) && data[0]
@@ -188,4 +189,53 @@ function groupWords(words) {
     text: g.text,
     bbox: g.bbox,
   }));
+}
+
+// Tesseract inserts spaces between CJK characters; remove them before translating.
+function cleanCJK(text) {
+  const cjk = "\\u3040-\\u30ff\\u4e00-\\u9fff\\uac00-\\ud7af\\uff00-\\uffef\\u3000-\\u303f";
+  return text.replace(new RegExp("(?<=[" + cjk + "])\\s+(?=[" + cjk + "])", "g"), "");
+}
+
+// Vertical manga text: columns read right-to-left, characters top-to-bottom.
+function groupWordsVertical(words) {
+  if (words.length === 0) return [];
+  const sorted = [...words].sort((a, b) => {
+    const acx = (a.bbox.x0 + a.bbox.x1) / 2;
+    const bcx = (b.bbox.x0 + b.bbox.x1) / 2;
+    if (Math.abs(acx - bcx) > 15) return bcx - acx; // right column first
+    return a.bbox.y0 - b.bbox.y0;
+  });
+
+  const groups = [];
+  let current = null;
+  const startGroup = (w) => ({ text: w.text, bbox: { ...w.bbox } });
+
+  for (const word of sorted) {
+    if (!current) {
+      current = startGroup(word);
+      continue;
+    }
+    const xOverlap =
+      Math.min(current.bbox.x1, word.bbox.x1) -
+      Math.max(current.bbox.x0, word.bbox.x0);
+    const xRange = Math.max(
+      current.bbox.x1 - current.bbox.x0,
+      word.bbox.x1 - word.bbox.x0
+    );
+    const sameColumn = xOverlap > xRange * 0.4;
+    const yGap = word.bbox.y0 - current.bbox.y1;
+
+    if (sameColumn && yGap < 80) {
+      current.text += word.text;
+      current.bbox.x0 = Math.min(current.bbox.x0, word.bbox.x0);
+      current.bbox.x1 = Math.max(current.bbox.x1, word.bbox.x1);
+      current.bbox.y1 = Math.max(current.bbox.y1, word.bbox.y1);
+    } else {
+      groups.push(current);
+      current = startGroup(word);
+    }
+  }
+  if (current) groups.push(current);
+  return groups;
 }
