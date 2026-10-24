@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { unzipFile } from "./lib/unzip.js";
-import { LANGUAGES, detectLanguage } from "./lib/translate.js";
+
 import { runOCRProgress } from "./lib/ocr.js";
 import UploadView from "./components/UploadView.jsx";
 import ReaderView from "./components/ReaderView.jsx";

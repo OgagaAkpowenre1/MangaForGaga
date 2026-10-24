@@ -1,10 +1,10 @@
-import Tesseract from "tesseract.js";
+import { createWorker } from "tesseract.js";
 
 let workers = {};
 
 async function getWorker(lang) {
   if (workers[lang]) return workers[lang];
-  const worker = await Tesseract.createWorker(lang, 1, {
+  const worker = await createWorker(lang, 1, {
     logger: () => {},
   });
   workers[lang] = worker;
@@ -14,26 +14,25 @@ async function getWorker(lang) {
 export async function runOCR(imageUrl, lang) {
   const worker = await getWorker(lang);
   const { data } = await worker.recognize(imageUrl);
-  return data.words
-    .filter((w) => w.text.trim())
-    .map((w) => ({
-      text: w.text.trim(),
-      bbox: w.bbox,
-      confidence: w.confidence,
-    }));
+  return extractWords(data);
 }
 
 export async function runOCRProgress(imageUrl, lang, onProgress) {
   const worker = await getWorker(lang);
-  const { data } = await worker.recognize(imageUrl, {}, { 
+  const { data } = await worker.recognize(imageUrl, {
     logger: (m) => {
       if (m.status === "recognizing text" && onProgress) {
         onProgress(m.progress);
       }
-    }
+    },
   });
+  return extractWords(data);
+}
+
+function extractWords(data) {
+  if (!data.words) return [];
   return data.words
-    .filter((w) => w.text.trim())
+    .filter((w) => w.text && w.text.trim())
     .map((w) => ({
       text: w.text.trim(),
       bbox: w.bbox,
@@ -43,7 +42,11 @@ export async function runOCRProgress(imageUrl, lang, onProgress) {
 
 export async function terminateAll() {
   for (const lang in workers) {
-    await workers[lang].terminate();
+    try {
+      await workers[lang].terminate();
+    } catch (e) {
+      // ignore
+    }
   }
   workers = {};
 }
